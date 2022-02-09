@@ -1,7 +1,7 @@
 free5GC-srsRAN
 ================
 
-Patch of [free5GC stage1](https://bitbucket.org/nctu_5g/free5gc-stage-1/src/master/) to enable ability connecting srsENB and srsUE
+Patch of [free5GC stage1](https://bitbucket.org/nctu_5g/free5gc-stage-1/src/master/) to fix the session error as srsRAN connected
 
 ## Tested Environment
 - OS: Ubuntu 20.04.3 LTS
