@@ -1,0 +1,506 @@
+From e3d5983c40477f0cd80b8f27b8a14d7a561291e3 Mon Sep 17 00:00:00 2001
+From: Yung-Hsiang Hu <iftnt1999@gmail.com>
+Date: Tue, 8 Feb 2022 17:05:38 +0800
+Subject: [PATCH 1/2] Fixed compilation error in Ubuntu 20.04 LTS. Linux
+ kernel: 5.11.0-44-generic; gcc: 9.3.0; go: 1.17.6; libmongoc: 1.16.1;
+ libsctp: 1.0.18;
+
+---
+ lib/freeDiameter-1.2.1/libfdcore/sctp.c |  2 +-
+ lib/ipfw/dummynet.c                     |  2 +-
+ lib/ipfw/ipfw2.c                        |  2 +-
+ lib/ipfw/tables.c                       |  2 +-
+ lib/nextepc/core/src/debug.c            |  6 +++---
+ lib/nextepc/core/src/unix/tun.c         |  4 ++--
+ lib/nextepc/core/test/testhash.c        | 14 +++++++++++---
+ lib/nextepc/core/test/testtime.c        |  2 +-
+ lib/sbiJson/JsonTransform.c             |  6 ++++--
+ src/amf/amf_json_handler.c              |  9 +++++----
+ src/amf/amf_sbi_path.c                  | 16 ++++++++--------
+ src/app/context.c                       |  5 ++++-
+ src/smf/smf_sbi_path.c                  | 16 ++++++++--------
+ test/basic/attach_test.c                | 18 ++++++------------
+ test/basic/handover_test.c              |  6 ++----
+ test/basic/volte_test.c                 |  6 ++----
+ test/volte/testutil.c                   |  4 +++-
+ test/volte/volte_test.c                 |  6 ++----
+ 18 files changed, 65 insertions(+), 61 deletions(-)
+
+diff --git a/lib/freeDiameter-1.2.1/libfdcore/sctp.c b/lib/freeDiameter-1.2.1/libfdcore/sctp.c
+index c80a4978..87ec692b 100644
+--- a/lib/freeDiameter-1.2.1/libfdcore/sctp.c
++++ b/lib/freeDiameter-1.2.1/libfdcore/sctp.c
+@@ -45,7 +45,7 @@
+ #endif /* CMSG_BUF_LEN */
+ 
+ /* Use old draft-ietf-tsvwg-sctpsocket-17 API ? If not defined, RFC6458 API will be used */
+-/* #define OLD_SCTP_SOCKET_API */
++#define OLD_SCTP_SOCKET_API
+ 
+ /* Automatically fallback to old API if some of the new symbols are not defined */
+ #if (!defined(SCTP_CONNECTX_4_ARGS) || (!defined(SCTP_RECVRCVINFO)) || (!defined(SCTP_SNDINFO))) 
+diff --git a/lib/ipfw/dummynet.c b/lib/ipfw/dummynet.c
+index 19383079..ff173850 100644
+--- a/lib/ipfw/dummynet.c
++++ b/lib/ipfw/dummynet.c
+@@ -18,7 +18,7 @@
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ /* XXX there are several sysctl leftover here */
+-#include <sys/sysctl.h>
++#include <linux/sysctl.h>
+ 
+ #include "ipfw2.h"
+ 
+diff --git a/lib/ipfw/ipfw2.c b/lib/ipfw/ipfw2.c
+index b8ef6ee7..1251df6a 100644
+--- a/lib/ipfw/ipfw2.c
++++ b/lib/ipfw/ipfw2.c
+@@ -24,7 +24,7 @@
+ #include <sys/param.h>
+ #include <sys/socket.h>
+ #include <sys/sockio.h>
+-#include <sys/sysctl.h>
++#include <linux/sysctl.h>
+ 
+ #include "ipfw2.h"
+ 
+diff --git a/lib/ipfw/tables.c b/lib/ipfw/tables.c
+index e75b59ae..9643006e 100644
+--- a/lib/ipfw/tables.c
++++ b/lib/ipfw/tables.c
+@@ -20,7 +20,7 @@
+ #include <sys/types.h>
+ #include <sys/param.h>
+ #include <sys/socket.h>
+-#include <sys/sysctl.h>
++#include <linux/sysctl.h>
+ 
+ #include <ctype.h>
+ #include <err.h>
+diff --git a/lib/nextepc/core/src/debug.c b/lib/nextepc/core/src/debug.c
+index 657fe6c0..1c8b0716 100644
+--- a/lib/nextepc/core/src/debug.c
++++ b/lib/nextepc/core/src/debug.c
+@@ -525,7 +525,7 @@ int d_msg(int tp, int lv, c_time_t t, char *fn, int ln, char *fmt, ...)
+         {
+             vsprintf(str, fmt, args);
+ 
+-            n = sprintf(fstr, "["TIME_FMT_STR"] %s",
++            n = snprintf(fstr, sizeof(fstr), "["TIME_FMT_STR"] %s",
+                     te.tm_mon + 1, te.tm_mday, te.tm_hour,
+                     te.tm_min, te.tm_sec, te.tm_usec/1000, str);
+ 
+@@ -570,7 +570,7 @@ int d_msg(int tp, int lv, c_time_t t, char *fn, int ln, char *fmt, ...)
+ 
+             vsprintf(str, fmt, args);
+ 
+-            n = sprintf(fstr, "["TIME_FMT_STR"] %s: %s (%s:%d)",
++            n = snprintf(fstr, sizeof(fstr), "["TIME_FMT_STR"] %s: %s (%s:%d)",
+                     te.tm_mon + 1, te.tm_mday, te.tm_hour,
+                     te.tm_min, te.tm_sec, te.tm_usec/1000,
+                     lv_str[lv], str, fn, ln);
+@@ -612,7 +612,7 @@ int d_msg(int tp, int lv, c_time_t t, char *fn, int ln, char *fmt, ...)
+         {
+             vsprintf(str, fmt, args);
+ 
+-            n = sprintf(fstr, "[" TIME_FMT_STR "] ASSERT: %s (%s:%d)",
++            n = snprintf(fstr, sizeof(fstr), "[" TIME_FMT_STR "] ASSERT: %s (%s:%d)",
+                     te.tm_mon + 1, te.tm_mday, te.tm_hour,
+                     te.tm_min, te.tm_sec, te.tm_usec/1000, str, fn, ln);
+ 
+diff --git a/lib/nextepc/core/src/unix/tun.c b/lib/nextepc/core/src/unix/tun.c
+index 371e1051..1577b646 100644
+--- a/lib/nextepc/core/src/unix/tun.c
++++ b/lib/nextepc/core/src/unix/tun.c
+@@ -57,13 +57,13 @@ status_t tun_open(sock_id *new, char *ifname, int is_tap)
+     /* Save socket descriptor */
+     sock->fd = fd;
+     /* Save the interface name */
+-    strncpy(sock->ifname, ifname, IFNAMSIZ);
++    strncpy(sock->ifname, ifname, IFNAMSIZ-1);
+ 
+ #if LINUX == 1
+     memset(&ifr, 0, sizeof(ifr));
+ 
+     ifr.ifr_flags = (is_tap ? (flags | IFF_TAP) : (flags | IFF_TUN));
+-    strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
++    strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
+ 
+     rc = ioctl(sock->fd, TUNSETIFF, (void *)&ifr);
+     if (rc < 0)
+diff --git a/lib/nextepc/core/test/testhash.c b/lib/nextepc/core/test/testhash.c
+index d2779304..801217f2 100644
+--- a/lib/nextepc/core/test/testhash.c
++++ b/lib/nextepc/core/test/testhash.c
+@@ -12,7 +12,8 @@ static int comp_string(const void *str1, const void *str2)
+ static void dump_hash(hash_t *h, char str[][MAX_LTH]) 
+ {
+     hash_index_t *hi;
+-    int i = 0;
++    int i = 0, n;
++    char tmp_str[MAX_LTH];
+ 
+     for (hi = hash_first(h); hi; hi = hash_next(hi)) {
+         const char *key = hash_this_key(hi);
+@@ -20,12 +21,19 @@ static void dump_hash(hash_t *h, char str[][MAX_LTH])
+         char *val = hash_this_val(hi);
+ 
+         str[i][0]='\0';
+-        sprintf(str[i], "%sKey %s (%d) Value %s\n",
++        n = snprintf(tmp_str, sizeof(tmp_str), "%sKey %s (%d) Value %s\n",
+                  str[i], key, len, val);
++        if(n>=0){
++            strcpy(str[i], tmp_str);
++        }
++	strcpy(str[i], tmp_str);
+         i++;
+     }
+     str[i][0]='\0';
+-    sprintf(str[i], "%s#entries %d\n", str[i], i);
++    n = snprintf(tmp_str, sizeof(tmp_str), "%s#entries %d\n", str[i], i);
++    if(n>=0){
++        strcpy(str[i], tmp_str);
++    }
+ 
+     /* Sort the result strings so that they can be checked for expected results easily,
+      * without having to worry about platform quirks
+diff --git a/lib/nextepc/core/test/testtime.c b/lib/nextepc/core/test/testtime.c
+index 46bbf490..0335b38b 100644
+--- a/lib/nextepc/core/test/testtime.c
++++ b/lib/nextepc/core/test/testtime.c
+@@ -1,7 +1,7 @@
+ #include "core_time.h"
+ #include "testutil.h"
+ 
+-#define STR_SIZE 45
++#define STR_SIZE 128
+ 
+ /* The time value is used throughout the tests, so just make this a global.
+  * Also, we need a single value that we can test for the positive tests, so
+diff --git a/lib/sbiJson/JsonTransform.c b/lib/sbiJson/JsonTransform.c
+index 84623b34..2e87cb09 100644
+--- a/lib/sbiJson/JsonTransform.c
++++ b/lib/sbiJson/JsonTransform.c
+@@ -19,13 +19,15 @@ void plmn_id_to_buffer(plmn_id_t plmn_id, char* mcc, char* mnc){
+ }
+ 
+ char* uint_to_buffer(char* conv, c_uint8_t* input, int len){
++    char tmp_conv[128];
+     bzero(conv, 1000);
+     for(int i = 0; i < len; i++){
+ #if WORDS_BIGENDIAN
+-        sprintf(conv, "%s%x%x", conv, (input[i]>>4)&0x0f, input[i]&0x0f);
++        sprintf(tmp_conv, "%x%x", (input[i]>>4)&0x0f, input[i]&0x0f);
+ #else
+-        sprintf(conv, "%s%x%x", conv, input[i]&0x0f, (input[i]>>4)&0x0f);
++        sprintf(tmp_conv, "%x%x", input[i]&0x0f, (input[i]>>4)&0x0f);
+ #endif
++	strcat(conv, tmp_conv);
+     }
+     return conv;
+ }
+diff --git a/src/amf/amf_json_handler.c b/src/amf/amf_json_handler.c
+index 639b9893..44107417 100644
+--- a/src/amf/amf_json_handler.c
++++ b/src/amf/amf_json_handler.c
+@@ -31,12 +31,13 @@ void buffer_to_uint(c_uint8_t* output, const char* input, int len){
+ }
+ 
+ void print_uint_array(c_uint8_t* input, int len){
+-    char temp[1000];
+-    bzero(temp, 1000);
++    char buf[1000], tmp[128];
++    bzero(buf, 1000);
+     for(int i = 0; i < len; i++){
+-        sprintf(temp, "%s\t%d", temp, input[i]);
++        sprintf(tmp, "\t%d", input[i]);
++	strcat(buf, tmp);
+     }
+-    printf("buffer : %s\n", temp);
++    printf("buffer : %s\n", buf);
+     return;
+ }
+ 
+diff --git a/src/amf/amf_sbi_path.c b/src/amf/amf_sbi_path.c
+index 1ad70c57..faf1ebe3 100644
+--- a/src/amf/amf_sbi_path.c
++++ b/src/amf/amf_sbi_path.c
+@@ -179,43 +179,43 @@ status_t amf_sbi_server_open()
+     status_t rv;
+ 
+     // Create csock for smContextCreate
+-    memcpy(smContextCreateLocalAddr.sun_path, "/tmp/amf_smContextCreate.csock", sizeof(smContextCreateLocalAddr.sun_path));
++    strncpy(smContextCreateLocalAddr.sun_path, "/tmp/amf_smContextCreate.csock", sizeof(smContextCreateLocalAddr.sun_path));
+     smContextCreateLocalAddr.sun.sun_family = AF_UNIX;
+     rv = unixgram_server(&smContextCreateSock, &smContextCreateLocalAddr);
+     d_assert(rv == CORE_OK, return CORE_ERROR, "SBI failed");
+     rv = sock_register(smContextCreateSock, _amf_sbi_message_amf_smContextCreate, NULL);
+     d_assert(rv == CORE_OK, return CORE_ERROR,);
+-    memcpy(smContextCreateRemoteAddr.sun_path, "/tmp/amf_smContextCreate.gsock", sizeof(smContextCreateRemoteAddr.sun_path));
++    strncpy(smContextCreateRemoteAddr.sun_path, "/tmp/amf_smContextCreate.gsock", sizeof(smContextCreateRemoteAddr.sun_path));
+     smContextCreateRemoteAddr.sun.sun_family = AF_UNIX;
+ 
+     // Create csock for smContextUpdate
+-    memcpy(smContextUpdateLocalAddr.sun_path, "/tmp/amf_smContextUpdate.csock", sizeof(smContextUpdateLocalAddr.sun_path));
++    strncpy(smContextUpdateLocalAddr.sun_path, "/tmp/amf_smContextUpdate.csock", sizeof(smContextUpdateLocalAddr.sun_path));
+     smContextUpdateLocalAddr.sun.sun_family = AF_UNIX;
+     rv = unixgram_server(&smContextUpdateSock, &smContextUpdateLocalAddr);
+     d_assert(rv == CORE_OK, return CORE_ERROR, "SBI failed");
+     rv = sock_register(smContextUpdateSock, _amf_sbi_message_amf_smContextUpdate, NULL);
+     d_assert(rv == CORE_OK, return CORE_ERROR,);
+-    memcpy(smContextUpdateRemoteAddr.sun_path, "/tmp/amf_smContextUpdate.gsock", sizeof(smContextUpdateRemoteAddr.sun_path));
++    strncpy(smContextUpdateRemoteAddr.sun_path, "/tmp/amf_smContextUpdate.gsock", sizeof(smContextUpdateRemoteAddr.sun_path));
+     smContextUpdateRemoteAddr.sun.sun_family = AF_UNIX;
+ 
+     // Create csock for smContextRelease
+-    memcpy(smContextReleaseLocalAddr.sun_path, "/tmp/amf_smContextRelease.csock", sizeof(smContextReleaseLocalAddr.sun_path));
++    strncpy(smContextReleaseLocalAddr.sun_path, "/tmp/amf_smContextRelease.csock", sizeof(smContextReleaseLocalAddr.sun_path));
+     smContextReleaseLocalAddr.sun.sun_family = AF_UNIX;
+     rv = unixgram_server(&smContextReleaseSock, &smContextReleaseLocalAddr);
+     d_assert(rv == CORE_OK, return CORE_ERROR, "SBI failed");
+     rv = sock_register(smContextReleaseSock, _amf_sbi_message_amf_smContextRelease, NULL);
+     d_assert(rv == CORE_OK, return CORE_ERROR,);
+-    memcpy(smContextReleaseRemoteAddr.sun_path, "/tmp/amf_smContextRelease.gsock", sizeof(smContextReleaseRemoteAddr.sun_path));
++    strncpy(smContextReleaseRemoteAddr.sun_path, "/tmp/amf_smContextRelease.gsock", sizeof(smContextReleaseRemoteAddr.sun_path));
+     smContextReleaseRemoteAddr.sun.sun_family = AF_UNIX;
+ 
+     // Create csock for smContextRetrieve
+-    memcpy(smContextRetrieveLocalAddr.sun_path, "/tmp/amf_smContextRetrieve.csock", sizeof(smContextRetrieveLocalAddr.sun_path));
++    strncpy(smContextRetrieveLocalAddr.sun_path, "/tmp/amf_smContextRetrieve.csock", sizeof(smContextRetrieveLocalAddr.sun_path));
+     smContextRetrieveLocalAddr.sun.sun_family = AF_UNIX;
+     rv = unixgram_server(&smContextRetrieveSock, &smContextRetrieveLocalAddr);
+     d_assert(rv == CORE_OK, return CORE_ERROR, "SBI failed");
+     rv = sock_register(smContextRetrieveSock, _amf_sbi_message_amf_smContextRetrieve, NULL);
+     d_assert(rv == CORE_OK, return CORE_ERROR,);
+-    memcpy(smContextRetrieveRemoteAddr.sun_path, "/tmp/amf_smContextRetrieve.gsock", sizeof(smContextRetrieveRemoteAddr.sun_path));
++    strncpy(smContextRetrieveRemoteAddr.sun_path, "/tmp/amf_smContextRetrieve.gsock", sizeof(smContextRetrieveRemoteAddr.sun_path));
+     smContextRetrieveRemoteAddr.sun.sun_family = AF_UNIX;
+ 
+     amf_start_server();
+diff --git a/src/app/context.c b/src/app/context.c
+index 17e4c03b..d66f7994 100644
+--- a/src/app/context.c
++++ b/src/app/context.c
+@@ -349,7 +349,10 @@ status_t context_db_init(const char *db_uri)
+     d_assert(self.database, context_db_final(); return CORE_ERROR,
+             "Database is not defined in DB_URI [%s]", db_uri);
+ 
+-    if (!mongoc_client_get_server_status(self.db_client, NULL, &reply, &error)) 
++    if(!mongoc_client_read_command_with_opts(
++			    self.db_client, self.db_name,
++			    BCON_NEW("serverStatus", BCON_INT32 (1)), NULL, NULL,
++		            &reply, &error))
+     {
+         d_error("Failed to conect to server [%s]", db_uri);
+         return CORE_EAGAIN;
+diff --git a/src/smf/smf_sbi_path.c b/src/smf/smf_sbi_path.c
+index 9f212f22..be572fd0 100644
+--- a/src/smf/smf_sbi_path.c
++++ b/src/smf/smf_sbi_path.c
+@@ -175,43 +175,43 @@ status_t smf_sbi_server_open()
+     status_t rv;
+ 
+     // Create csock for smContextCreate
+-    memcpy(smContextCreateLocalAddr.sun_path, "/tmp/smf_smContextCreate.csock", sizeof(smContextCreateLocalAddr.sun_path));
++    strncpy(smContextCreateLocalAddr.sun_path, "/tmp/smf_smContextCreate.csock", sizeof(smContextCreateLocalAddr.sun_path));
+     smContextCreateLocalAddr.sun.sun_family = AF_UNIX;
+     rv = unixgram_server(&smContextCreateSock, &smContextCreateLocalAddr);
+     d_assert(rv == CORE_OK, return CORE_ERROR, "SBI failed");
+     rv = sock_register(smContextCreateSock, _smf_sbi_message_smf_smContextCreate, NULL);
+     d_assert(rv == CORE_OK, return CORE_ERROR,);
+-    memcpy(smContextCreateRemoteAddr.sun_path, "/tmp/smf_smContextCreate.gsock", sizeof(smContextCreateRemoteAddr.sun_path));
++    strncpy(smContextCreateRemoteAddr.sun_path, "/tmp/smf_smContextCreate.gsock", sizeof(smContextCreateRemoteAddr.sun_path));
+     smContextCreateRemoteAddr.sun.sun_family = AF_UNIX;
+ 
+     // Create csock for smContextUpdate
+-    memcpy(smContextUpdateLocalAddr.sun_path, "/tmp/smf_smContextUpdate.csock", sizeof(smContextUpdateLocalAddr.sun_path));
++    strncpy(smContextUpdateLocalAddr.sun_path, "/tmp/smf_smContextUpdate.csock", sizeof(smContextUpdateLocalAddr.sun_path));
+     smContextUpdateLocalAddr.sun.sun_family = AF_UNIX;
+     rv = unixgram_server(&smContextUpdateSock, &smContextUpdateLocalAddr);
+     d_assert(rv == CORE_OK, return CORE_ERROR, "SBI failed");
+     rv = sock_register(smContextUpdateSock, _smf_sbi_message_smf_smContextUpdate, NULL);
+     d_assert(rv == CORE_OK, return CORE_ERROR,);
+-    memcpy(smContextUpdateRemoteAddr.sun_path, "/tmp/smf_smContextUpdate.gsock", sizeof(smContextUpdateRemoteAddr.sun_path));
++    strncpy(smContextUpdateRemoteAddr.sun_path, "/tmp/smf_smContextUpdate.gsock", sizeof(smContextUpdateRemoteAddr.sun_path));
+     smContextUpdateRemoteAddr.sun.sun_family = AF_UNIX;
+ 
+     // Create csock for smContextRelease
+-    memcpy(smContextReleaseLocalAddr.sun_path, "/tmp/smf_smContextRelease.csock", sizeof(smContextReleaseLocalAddr.sun_path));
++    strncpy(smContextReleaseLocalAddr.sun_path, "/tmp/smf_smContextRelease.csock", sizeof(smContextReleaseLocalAddr.sun_path));
+     smContextReleaseLocalAddr.sun.sun_family = AF_UNIX;
+     rv = unixgram_server(&smContextReleaseSock, &smContextReleaseLocalAddr);
+     d_assert(rv == CORE_OK, return CORE_ERROR, "SBI failed");
+     rv = sock_register(smContextReleaseSock, _smf_sbi_message_smf_smContextRelease, NULL);
+     d_assert(rv == CORE_OK, return CORE_ERROR,);
+-    memcpy(smContextReleaseRemoteAddr.sun_path, "/tmp/smf_smContextRelease.gsock", sizeof(smContextReleaseRemoteAddr.sun_path));
++    strncpy(smContextReleaseRemoteAddr.sun_path, "/tmp/smf_smContextRelease.gsock", sizeof(smContextReleaseRemoteAddr.sun_path));
+     smContextReleaseRemoteAddr.sun.sun_family = AF_UNIX;
+ 
+     // Create csock for smContextRetrieve
+-    memcpy(smContextRetrieveLocalAddr.sun_path, "/tmp/smf_smContextRetrieve.csock", sizeof(smContextRetrieveLocalAddr.sun_path));
++    strncpy(smContextRetrieveLocalAddr.sun_path, "/tmp/smf_smContextRetrieve.csock", sizeof(smContextRetrieveLocalAddr.sun_path));
+     smContextRetrieveLocalAddr.sun.sun_family = AF_UNIX;
+     rv = unixgram_server(&smContextRetrieveSock, &smContextRetrieveLocalAddr);
+     d_assert(rv == CORE_OK, return CORE_ERROR, "SBI failed");
+     rv = sock_register(smContextRetrieveSock, _smf_sbi_message_smf_smContextRetrieve, NULL);
+     d_assert(rv == CORE_OK, return CORE_ERROR,);
+-    memcpy(smContextRetrieveRemoteAddr.sun_path, "/tmp/smf_smContextRetrieve.gsock", sizeof(smContextRetrieveRemoteAddr.sun_path));
++    strncpy(smContextRetrieveRemoteAddr.sun_path, "/tmp/smf_smContextRetrieve.gsock", sizeof(smContextRetrieveRemoteAddr.sun_path));
+     smContextRetrieveRemoteAddr.sun.sun_family = AF_UNIX;
+ 
+     smf_start_server();
+diff --git a/test/basic/attach_test.c b/test/basic/attach_test.c
+index 976efe7d..0692b846 100644
+--- a/test/basic/attach_test.c
++++ b/test/basic/attach_test.c
+@@ -139,8 +139,7 @@ static void attach_test1(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+@@ -628,8 +627,7 @@ static void attach_test2(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+@@ -644,8 +642,7 @@ static void attach_test2(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+@@ -979,8 +976,7 @@ static void attach_test3(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+@@ -1389,8 +1385,7 @@ static void attach_test4(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+@@ -1578,8 +1573,7 @@ static void attach_test5(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+diff --git a/test/basic/handover_test.c b/test/basic/handover_test.c
+index 5d16f0fa..5927393d 100644
+--- a/test/basic/handover_test.c
++++ b/test/basic/handover_test.c
+@@ -158,8 +158,7 @@ static void handover_test1(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+@@ -487,8 +486,7 @@ static void handover_test2(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+diff --git a/test/basic/volte_test.c b/test/basic/volte_test.c
+index fc08d3af..46829334 100644
+--- a/test/basic/volte_test.c
++++ b/test/basic/volte_test.c
+@@ -131,8 +131,7 @@ static void volte_test1(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+@@ -443,8 +442,7 @@ static void volte_test2(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+diff --git a/test/volte/testutil.c b/test/volte/testutil.c
+index c8ad9776..4babc921 100644
+--- a/test/volte/testutil.c
++++ b/test/volte/testutil.c
+@@ -72,7 +72,9 @@ status_t test_initialize(int argc, const char *const argv[], char *config_path)
+         path_remove_last_component(dir, argv[0]);
+         if (strstr(dir, ".libs"))
+             path_remove_last_component(dir, dir);
+-        sprintf(conf, "%s/sample-volte.conf", dir);
++        if(snprintf(conf, sizeof(conf), "%s/sample-volte.conf", dir)<0){
++            d_error("truncated string");
++	}
+     }
+ 
+     fd_logger_register(test_fd_logger_handler);
+diff --git a/test/volte/volte_test.c b/test/volte/volte_test.c
+index 822b348f..b1c20a40 100644
+--- a/test/volte/volte_test.c
++++ b/test/volte/volte_test.c
+@@ -122,8 +122,7 @@ static void volte_test1(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+@@ -471,8 +470,7 @@ static void volte_test2(abts_case *tc, void *data)
+     ABTS_PTR_NOTNULL(tc, doc);
+     do
+     {
+-        count = mongoc_collection_count (
+-            collection, MONGOC_QUERY_NONE, doc, 0, 0, NULL, &error);
++	count = mongoc_collection_count_documents(collection, doc, NULL, NULL, NULL, &error);
+     } while (count == 0);
+     bson_destroy(doc);
+ 
+-- 
+2.25.1
+

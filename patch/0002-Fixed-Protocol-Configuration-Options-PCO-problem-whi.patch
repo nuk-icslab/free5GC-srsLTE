@@ -1,0 +1,92 @@
+From 3b307118ee6dd1159aa512881036c3310f91d57b Mon Sep 17 00:00:00 2001
+From: Yung-Hsiang Hu <iftnt1999@gmail.com>
+Date: Tue, 8 Feb 2022 21:22:38 +0800
+Subject: [PATCH 2/2] Fixed Protocol Configuration Options(PCO) problem while
+ co-working with srsRAN
+
+---
+ README.md                   | 13 ++++++++-----
+ lib/sbiJson/JsonTransform.c | 15 ++++++++++++---
+ src/smf/smf_n11_handler.c   |  2 +-
+ 3 files changed, 21 insertions(+), 9 deletions(-)
+
+diff --git a/README.md b/README.md
+index 4504bcd4..b0caf2eb 100644
+--- a/README.md
++++ b/README.md
+@@ -6,10 +6,10 @@ The free5GC is an open-source project for 5th generation (5G) mobile core networ
+ 
+ ## Minimum Requirement
+ - Software
+-    - OS: Ubuntu 18.04
+-    - Linux kernel: 4.15.0-43-generic
+-    - gcc 7.3.0
+-    - Go 1.11.4
++    - OS: Ubuntu 20.04
++    - Linux kernel: 5.11.0-44-generic
++    - gcc 9.3.0
++    - Go 1.17.6
+     - QEMU emulator 2.11.1
+ 
+ - Hardware recommended
+@@ -70,7 +70,7 @@ OPc  8e27b6af0e692e750f32667a3b14605d
+ 
+ #### Prerequisites
+ 
+-Install MongoDB 3.6.3, Golang 1.11.4.
++Install MongoDB 3.6.9, Golang 1.17.6.
+ ```bash
+ sudo apt-get update
+ sudo apt-get -y install mongodb wget git
+@@ -86,6 +86,9 @@ chmod +x installer_linux
+ source ~/.bash_profile
+ rm -f installer_linux
+ 
++# Disable module support for backward compatibility
++go env -w GO111MODULE=auto
++
+ go get -u -v "github.com/gorilla/mux"
+ go get -u -v "golang.org/x/net/http2"
+ go get -u -v "golang.org/x/sys/unix"
+diff --git a/lib/sbiJson/JsonTransform.c b/lib/sbiJson/JsonTransform.c
+index 2e87cb09..016f3c7d 100644
+--- a/lib/sbiJson/JsonTransform.c
++++ b/lib/sbiJson/JsonTransform.c
+@@ -343,9 +343,18 @@ void _add_radio_type_to_struct(cJSON* json_key, c_uint8_t *radioType) {
+ 
+ void _add_pco_to_struct(cJSON* json_key, ue_pco_t *ue_pco) {
+ 
+-    cJSON *j_pco = cJSON_GetObjectItemCaseSensitive(json_key, JSONKEY_4G_PCO);
+-    ue_pco->length = strlen(j_pco->valuestring) / 2;
+-    core_ascii_to_hex(j_pco->valuestring, ue_pco->length * 2, ue_pco->buffer, ue_pco->length);
++    /*
++     * Extended Protocol Configuration Options(PCO) is a conditional parameter.
++     * Thus, check whether the item existed before access it.
++     * Otherwise will encounter fatal error when PCO doesn't existed.
++     */
++    if(cJSON_HasObjectItem(json_key, JSONKEY_4G_PCO)){
++        cJSON *j_pco = cJSON_GetObjectItemCaseSensitive(json_key, JSONKEY_4G_PCO);
++        ue_pco->length = strlen(j_pco->valuestring) / 2;
++        core_ascii_to_hex(j_pco->valuestring, ue_pco->length * 2, ue_pco->buffer, ue_pco->length);
++    }else{
++        ue_pco->length = 0;
++    }
+ }
+ 
+ void _add_apn_to_struct(cJSON* json_key, c_int8_t *apn) {
+diff --git a/src/smf/smf_n11_handler.c b/src/smf/smf_n11_handler.c
+index 6bf6ee52..672c2880 100644
+--- a/src/smf/smf_n11_handler.c
++++ b/src/smf/smf_n11_handler.c
+@@ -13,7 +13,7 @@ void smf_n11_handle_create_session_request(smf_sess_t *sess, create_session_t *c
+         memcpy(sess->pco_buf, createSession->ue_pco.buffer, createSession->ue_pco.length);
+         sess->pco_len = createSession->ue_pco.length;
+     } else {
+-        d_assert(createSession->ue_pco.length != 0, return, "NO PCO");
++        d_info("No Protocol Configuration Options found");
+     }
+ }
+ 
+-- 
+2.25.1
+
