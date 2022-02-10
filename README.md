@@ -1,4 +1,4 @@
-free5GC-srsRAN
+free5GC-srsLTE
 ================
 
 Patch of [free5GC stage1](https://bitbucket.org/nctu_5g/free5gc-stage-1/src/master/) to fix the session error as srsRAN/srsLTE connected
