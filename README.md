@@ -1,7 +1,7 @@
 free5GC-srsRAN
 ================
 
-Patch of [free5GC stage1](https://bitbucket.org/nctu_5g/free5gc-stage-1/src/master/) to fix the session error as srsRAN connected
+Patch of [free5GC stage1](https://bitbucket.org/nctu_5g/free5gc-stage-1/src/master/) to fix the session error as srsRAN/srsLTE connected
 
 ## Tested Environment
 - OS: Ubuntu 20.04.3 LTS
@@ -9,7 +9,7 @@ Patch of [free5GC stage1](https://bitbucket.org/nctu_5g/free5gc-stage-1/src/mast
 - GCC 9.3.0
 - Go 1.17.6
 - MongoDB 3.6.9
-- srsLTE 21.10
+- srsRAN 21.10 / srsLTE 20.04
 - NodeJS 16.13.0
 
 ## Preparation
@@ -36,8 +36,8 @@ OPc  63BFA50EE6523365FF14C1F45F88737D
 
 ## Automatically Installation
 ```bash
-git clone https://github.com/nuk-icslab/free5GC-srsRAN.git
-cd free5GC-srsRAN
+git clone https://github.com/nuk-icslab/free5GC-srsLTE.git
+cd free5GC-srsLTE
 bash ./install.sh
 ```
 
@@ -75,8 +75,8 @@ sudo systemctl restart systemd-networkd
 ### Compile Source Code
 
 ```bash
-git clone https://github.com/nuk-icslab/free5GC-srsRAN.git
-cd free5GC-srsRAN
+git clone https://github.com/nuk-icslab/free5GC-srsLTE.git
+cd free5GC-srsLTE
 
 git clone https://bitbucket.org/nctu_5g/free5gc-stage-1.git
 cd free5gc-stage-1
@@ -125,15 +125,15 @@ sudo iptables -A POSTROUTING -t nat -s 45.45.0.0/24 -o $OUT_IFACE -j MASQUERADE
 
 ```bash
 cd ../
-sudo ./free5gc-ngcd -f free5gc-srsran.conf
+sudo ./free5gc-ngcd -f free5gc-srslte.conf
 
 #or
 
-./nextepc-hssd -f free5gc-srsran.conf
-./free5gc-upfd -f free5gc-srsran.conf
-./free5gc-amfd -f free5gc-srsran.conf
-./nextepc-pcrfd -f free5gc-srsran.conf
-./free5gc-smfd -f free5gc-srsran.conf
+./nextepc-hssd -f free5gc-srslte.conf
+./free5gc-upfd -f free5gc-srslte.conf
+./free5gc-amfd -f free5gc-srslte.conf
+./nextepc-pcrfd -f free5gc-srslte.conf
+./free5gc-smfd -f free5gc-srslte.conf
 ```
 And then you can start both srsenb and srsue directly.
 ![](https://i.imgur.com/geVdknm.png)
